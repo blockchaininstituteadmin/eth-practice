@@ -1,0 +1,83 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+        <script src="artefacts.js"></script>
+        <script>
+            const ETH_IN_WEI = 1000000000000000000;
+            function main() {
+              if (!window.ethereum) {
+                document.querySelector('#main').innerHTML = '<div class="alert alert-warning">No ethereum installed</div>';
+                return false;
+              }
+              window.ethereum.enable().then((accounts) => {
+                document.querySelector('#my_eth_address').value = accounts[0];
+
+                document.querySelector('#create_multisig').addEventListener('submit', (e) => {
+                  e.preventDefault();
+                  const value = web3.toWei(e.target.amount.value, "ether");
+                  console.log('value', value);
+                  var _second = e.target.another_address.value;
+                  var oneoftwoContract = web3.eth.contract(ABI);
+                  var oneoftwo = oneoftwoContract.new(
+                    _second,
+                    {
+                      from: web3.eth.accounts[0],
+                      data: '0x' + BYTECODE.object,
+                      gas: '4700000',
+                      value: value
+                    }, function (e, contract){
+                      console.log(e, contract);
+                      if (typeof contract.address !== 'undefined') {
+                        console.log('Contract mined! address: ' + contract.address + ' transactionHash: ' + contract.transactionHash);
+                        document.querySelector('#contract_created').style.display = '';
+                        document.querySelector('#txid').value = contract.transactionHash;
+                        document.querySelector('#contract_address').value = contract.address;
+                        document.querySelector('#contract_link').href = 'contract.html#' + contract.address;
+                      }
+                    })
+                });
+
+              });
+            }
+            main();
+        </script>
+    </head>
+    <body>
+        <div class="container">
+            <div class="row">
+                <div class="com-md-12">
+                    <div id="main">
+                        <div class="form-group">
+                            <h1>My ethereum address is</h1>
+                            <input class="form-control" id="my_eth_address">
+                        </div>
+                    </div>
+                    <h2>Create multisig</h2>
+                    <form id="create_multisig">
+                        <div class="form-group">
+                            <label>Another address</label>
+                            <input class="form-control" name="another_address" value="0xFB4EA8741b73011F8C58d845182F621eE49B0D4D"/>
+                        </div>
+                        <div class="form-group">
+                            <label>Amount</label>
+                            <input class="form-control" name="amount" value="1"/>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Deploy smart contract</button>
+                    </form>
+                    <div id="contract_created" class="alert alert-success" style="display: none;">
+                        <h2>Contract created</h2>
+                        <div class="form-group">
+                            <label>Transaction hash</label>
+                            <input id="txid" class="form-control">
+                            <label>Contract address</label>
+                            <input id="contract_address" class="form-control">
+                        </div>
+                        <a id="contract_link" href="">Go to contract</a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </body>
+</html>

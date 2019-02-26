@@ -1,0 +1,146 @@
+<html>
+<head>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <script src="artefacts.js"></script>
+    <script>
+      const ETH_IN_WEI = 1000000000000000000;
+      function main() {
+        if (!window.ethereum) {
+          document.querySelector('#main').innerHTML = '<div class="alert alert-warning">No ethereum installed</div>';
+          return false;
+        }
+        const address = document.location.hash.substr(1);
+        if (!address) {
+          alert('No address');
+        }
+        document.querySelector('#contract_address').value = address;
+
+        window.ethereum.enable().then((accounts) => {
+          console.log(accounts);
+          document.querySelector('#my_eth_address').value = accounts[0];
+          document.querySelector('#dst').value = accounts[0];
+
+          const contract = web3.eth.contract(
+            ABI
+          );
+
+          const myContract = contract.at(address);
+
+          console.log(myContract);
+
+          myContract.first.call((err, value) => {
+            document.querySelector('#first').value = value;
+          });
+
+          myContract.second.call((err, value) => {
+            document.querySelector('#second').value = value;
+          });
+
+          web3.eth.getBalance(address, (err, balance) => {
+            console.log('balance', balance);
+            document.querySelector('#contract_balance').value = web3.fromWei(balance, "ether");
+          });
+
+          myContract.isOwner.call((err, value) => {
+            console.log(value);
+            if (value) {
+              document.querySelector('#send').style.display = '';
+            }
+          });
+
+          document.querySelector('#send').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const dst = e.target.dst.value;
+            const amount = web3.toWei(e.target.amount.value, "ether");
+            console.log(amount);
+            myContract.withdraw(
+              dst,
+              amount,
+              {from: accounts[0]},
+              (err, resp) => {
+                console.log(err);
+                document.querySelector('#send_tx').value = resp;
+                web3.eth.getTransactionReceipt(resp, (error, receipt) => {
+                  document.querySelector('#transaction_sent').style.display = '';
+                  console.log(error);
+                  console.log(receipt);
+                  document.querySelector('#gas_used').value = receipt.gasUsed;
+                });
+              }
+            );
+
+          });
+
+          console.log('Subscribe to events');
+          myContract.Withdraw({fromBlock: 0}, (err, event) => {
+            console.log(err);
+            const tbody = document.querySelector('#withdraw');
+            const row = document.createElement('tr');
+            row.innerHTML = '<td>' + event.args._from + '</td><td>' + event.args._to + '</td><td>' + web3.fromWei(event.args._amount);
+            tbody.appendChild(row);
+          });
+
+
+        });
+      }
+
+    </script>
+</head>
+<body>
+<div class="container">
+    <div class="row">
+        <div class="com-md-12">
+            <div id="main">
+                <div class="form-group">
+                    <h1>My ethereum address is</h1>
+                    <input class="form-control" id="my_eth_address">
+                </div>
+            </div>
+            <h2>Multisig</h2>
+            <input type="text" id="contract_address" class="form-control"/>
+            <h2>Properies</h2>
+            <label>Balance</label>
+            <input id="contract_balance" class="form-control"/>
+            <label>First</label>
+            <input id="first" class="form-control"/>
+            <label>Second</label>
+            <input id="second" class="form-control"/>
+
+            <form id="send" style="display: none;">
+                <h2>Send</h2>
+                <label>To</label>
+                <input type="text" class="form-control" id="dst" name="dst" value=""/>
+                <label>Amount</label>
+                <input type="text" class="form-control" name="amount" value="0.1"/>
+                <button type="submit" class="btn btn-primary">Send</button>
+
+                <div id="transaction_sent" style="display: none;" class="alert alert-success">
+                    <label>Txid</label>
+                    <input type="text" class="form-control" id="send_tx"/>
+                    <label>Gas used</label>
+                    <input type="text" class="form-control" id="gas_used">
+                </div>
+            </form>
+
+            <h3>Recent transactions</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>From</th>
+                        <th>To</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="withdraw">
+
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+<script>
+  main();
+</script>
+</body>
+</html>
