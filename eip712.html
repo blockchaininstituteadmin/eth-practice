@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <script>
+        function main() {
+            if (!window.ethereum) {
+              alert('No ethereum here');
+            }
+            window.ethereum.enable().then((accounts) => {
+                document.querySelector('#sign_form').addEventListener('submit', (e) => {
+                  e.preventDefault();
+                  const contract = e.target.contract.value;
+                  const address = e.target.address.value;
+
+                  const domain = [
+                    { name: "name", type: "string" },
+                    { name: "version", type: "string" },
+                    { name: "chainId", type: "uint256" },
+                    { name: "verifyingContract", type: "address" },
+                    { name: "salt", type: "bytes32" },
+                  ];
+                  const withdraw = [
+                    { name: "dst", type: "address" },
+                  ];
+
+                  const domainData = {
+                    name: "Withdraw dApp",
+                    version: "2",
+                    chainId: parseInt(5777),
+                    verifyingContract: contract,
+                    salt: "0xf2d857f4a3edcb9b78b4d503bfe733db1e3f6cdc2b7971ee739626c97e86a558"
+                  };
+
+                  var message = {
+                    dst: address
+                  };
+
+                  const data = {
+                    types: {
+                      EIP712Domain: domain,
+                      Withdraw: withdraw,
+                    },
+                    domain: domainData,
+                    primaryType: "Withdraw",
+                    message: message
+                  };
+
+                  console.log('Data');
+                  console.log(data);
+
+                  web3.currentProvider.sendAsync(
+                    {
+                      method: "eth_signTypedData_v3",
+                      params: [accounts[0], JSON.stringify(data)],
+                      from: accounts[0]
+                    },
+                    function(err, result) {
+                      if (err) {
+                        return console.error(err);
+                      }
+                      console.log(result);
+                      const signature = result.result.substring(2);
+                      const r = "0x" + signature.substring(0, 64);
+                      const s = "0x" + signature.substring(64, 128);
+                      const v = parseInt(signature.substring(128, 130), 16);
+                      // The signature is now comprised of r, s, and v.
+
+                      document.querySelector('#signature').style.display = '';
+                      document.querySelector('#r').value = r;
+                      document.querySelector('#s').value = s;
+                      document.querySelector('#v').value = v;
+                    }
+                  );
+
+                });
+            });
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <h1>Sign and pay</h1>
+            <div class="col-md-12">
+                <form id="sign_form">
+
+                    <div class="form-group">
+                        <label>Contract</label>
+                        <input type="text" name="contract" class="form-control" value=""/>
+                        <label>Address</label>
+                        <input type="text" name="address" class="form-control" value=""/>
+                    </div>
+                    <button type="submit">Sign</button>
+                    <div id="signature" class="alert alert-success" style="display: none; margin-top: 1em;">
+                        <label>r</label>
+                        <input id="r" class="form-control"/>
+                        <label>s</label>
+                        <input id="s" class="form-control"/>
+                        <label>v</label>
+                        <input id="v" class="form-control"/>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script>
+        main();
+    </script>
+</body>
+</html>
